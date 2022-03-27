@@ -1,0 +1,11 @@
+<form action="/users" method="get">
+    <input type="search" name="term" value="<?= htmlspecialchars($term) ?>" />
+    <input type="submit" value="Search" />
+</form>
+<?php if (!empty($users) && is_countable($users)):
+    echo '<ul>';
+    foreach ($users as $user) {
+        echo '<li>'.$user.'</li>';
+    }
+    echo '</ul>';
+endif;?>

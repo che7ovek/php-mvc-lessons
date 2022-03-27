@@ -3,10 +3,7 @@
 // Подключение автозагрузки через composer
 require __DIR__ . '/../vendor/autoload.php';
 
-$nums = [];
-for ($i = 0; $i < 10; $i++) {
-    $nums[] = $i;
-}
+$users = ['mike', 'mishel', 'adel', 'keks', 'kamila'];
 
 use Slim\Factory\AppFactory;
 use DI\Container;
@@ -41,8 +38,17 @@ $app->get('/user/{id:[0-9]+}', function ($request, $response, array $args) {
     return $response->withStatus(200);
 });
 
-$app->get('/users', function ($request, $response) use ($nums){
-    return $response->write(json_encode($nums));
+$app->get('/users', function ($request, $response) use ($users) {
+    $term = $request->getQueryParam('term') ?: '';
+    if ($term) {
+        $resultUsers = array_filter($users, function ($value) use ($term) {
+            return str_contains($value, $term);
+        });
+    } else {
+        $resultUsers = $users;
+    }
+    $params = ['users' => $resultUsers, 'term' => $term];
+    return $this->get('renderer')->render($response, 'users/index.phtml', $params);
 });
 
 $app->get('/users/{id}', function ($request, $response, array $args) {
