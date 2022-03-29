@@ -1,14 +1,14 @@
 <form action="/users" method="post">
     <div>
-        <label for="userName">Имя</label>
-        <input type="text" id="userName" name="user[name]" value="<?=htmlspecialchars($user['name'])?>"/>
+        <label for="userName">Имя *</label>
+        <input type="text" id="userName" name="user[name]" value="<?=htmlspecialchars($user['name'])?>" required/>
         <?php if (isset($errors['name'])):?>
         <div class="error"><?=$errors['name']?></div>
         <?php endif ?>
     </div>
     <div>
-        <label for="userNickname">Ник</label>
-        <input type="text" id="userNickname" name="user[nickname]" value="<?=htmlspecialchars($user['nickname'])?>"/>
+        <label for="userNickname">Ник *</label>
+        <input type="text" id="userNickname" name="user[nickname]" value="<?=htmlspecialchars($user['nickname'])?>" required/>
         <?php if (isset($errors['nickname'])):?>
             <div class="error"><?=$errors['nickname']?></div>
         <?php endif ?>

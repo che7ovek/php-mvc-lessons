@@ -68,7 +68,7 @@ $app->get('/users/{id:[0-9]+}', function ($request, $response, array $args) use 
     $user = $users[$args['id']];
     $params = ['id' => $args['id'], 'nickname' => $user['nickname']];
     return $this->get('renderer')->render($response, 'users/show.phtml', $params);
-})->setName('user');
+})->setName('users');
 
 $app->get('/users/new', function ($request, $response) {
     $params = [
@@ -76,7 +76,7 @@ $app->get('/users/new', function ($request, $response) {
         'errors' => []
     ];
     return $this->get('renderer')->render($response, 'users/new.phtml', $params);
-})->setName('user-new');
+})->setName('users-new');
 
 $app->post('/users', function ($request, $response) use ($router, $userPath) {
     $user = $request->getParsedBodyParam('user');
@@ -104,7 +104,7 @@ $app->post('/users', function ($request, $response) use ($router, $userPath) {
         'errors' => $errors
     ];
     return $this->get('renderer')->render($response, 'users/new.phtml', $params)->withStatus(422);
-})->setName('user-add');;
+})->setName('users');;
 
 $app->get('/users/{id:[0-9]+}/edit', function ($request, $response, array $args) use ($userPath) {
     $users = file_get_contents($userPath);
@@ -122,7 +122,7 @@ $app->get('/users/{id:[0-9]+}/edit', function ($request, $response, array $args)
     $user = $users[$args['id']];
     $params = ['id' => $args['id'], 'name' => $user['name'], 'nickname' => $user['nickname']];
     return $this->get('renderer')->render($response, 'users/edit.phtml', $params);
-})->setName('user-edit');
+})->setName('users-edit');
 
 // $app->put
 $app->patch('/users/{id:[0-9]+}', function ($request, $response, array $args) use ($router, $userPath) {
@@ -140,7 +140,7 @@ $app->patch('/users/{id:[0-9]+}', function ($request, $response, array $args) us
 
     $this->get('flash')->addMessage('success', 'User updated');
     return $response->withRedirect($router->urlFor('user', ['id' => $userId]), 302);
-})->setName('user-update');
+})->setName('users');
 
 $app->delete('/users/{id:[0-9]+}', function ($request, $response, array $args) use ($router, $userPath) {
     $users = file_get_contents($userPath);
@@ -160,6 +160,6 @@ $app->delete('/users/{id:[0-9]+}', function ($request, $response, array $args) u
 
     $this->get('flash')->addMessage('success', 'User deleted');
     return $response->withRedirect($router->urlFor('users'), 302);
-})->setName('user-update');
+})->setName('users');
 
 $app->run();
