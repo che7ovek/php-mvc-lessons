@@ -7,6 +7,7 @@ $users = ['mike', 'mishel', 'adel', 'keks', 'kamila'];
 $userPath = __DIR__.'/templates/users/files/users.json';
 
 use Slim\Factory\AppFactory;
+use Slim\Middleware\MethodOverrideMiddleware;
 use DI\Container;
 
 session_start();
@@ -21,6 +22,7 @@ $container->set('flash', function() {
 });
 
 $app = AppFactory::createFromContainer($container);
+$app->add(MethodOverrideMiddleware::class);
 $app->addErrorMiddleware(true, true, true);
 
 $router = $app->getRouteCollector()->getRouteParser();
@@ -65,8 +67,9 @@ $app->get('/users/{id:[0-9]+}', function ($request, $response, array $args) use 
         return $response->withStatus(404);
     }
 
-    $user = $users[$args['id']];
-    $params = ['id' => $args['id'], 'nickname' => $user['nickname']];
+    $user = $users[$userId];
+    $user['id'] = $userId;
+    $params = ['user' => $user];
     return $this->get('renderer')->render($response, 'users/show.phtml', $params);
 })->setName('users');
 
@@ -116,11 +119,12 @@ $app->get('/users/{id:[0-9]+}/edit', function ($request, $response, array $args)
 
     $userId = $args['id'];
     if (!array_key_exists($userId, $users)) {
-        return $response->withStatus(404);
+        return $response->withStatus(404)->getBody()->write('Page not found');
     }
 
     $user = $users[$args['id']];
-    $params = ['id' => $args['id'], 'name' => $user['name'], 'nickname' => $user['nickname']];
+    $user['id'] = $userId;
+    $params = ['id' => $args['id'], 'user' => $user];
     return $this->get('renderer')->render($response, 'users/edit.phtml', $params);
 })->setName('users-edit');
 
@@ -138,9 +142,45 @@ $app->patch('/users/{id:[0-9]+}', function ($request, $response, array $args) us
         return $response->withStatus(404);
     }
 
-    $this->get('flash')->addMessage('success', 'User updated');
-    return $response->withRedirect($router->urlFor('user', ['id' => $userId]), 302);
+    $user = $request->getParsedBodyParam('user');
+    $user['id'] = $userId;
+    $errors = [];
+    if (empty($user['name'])) {
+        $errors['name'] = 'Empty name';
+    }
+    if (count($errors) === 0) {
+        $users[$userId]['name'] = $user['name'];
+        file_put_contents($userPath, json_encode($users));
+        $this->get('flash')->addMessage('success', 'User updated');
+        return $response->withRedirect($router->urlFor('users', ['id' => $userId]), 302);
+    }
+    $params = [
+        'user' => $user,
+        'errors' => $errors
+    ];
+    return $this->get('renderer')->render($response, 'users/edit.phtml', $params)->withStatus(422);
 })->setName('users');
+
+$app->get('/users/{id:[0-9]+}/delete', function ($request, $response, array $args) use ($router, $userPath) {
+    $users = file_get_contents($userPath);
+    if (!empty($users)) {
+        $users = json_decode($users, true);
+    } else {
+        return $response->withStatus(404);
+    }
+
+    $userId = $args['id'];
+    if (!array_key_exists($userId, $users)) {
+        return $response->withStatus(404);
+    }
+
+    $user = $users[$userId];
+    $user['id'] = $userId;
+    $params = [
+        'user' => $user
+    ];
+    return $this->get('renderer')->render($response, 'users/remove.phtml', $params);
+})->setName('users-delete');
 
 $app->delete('/users/{id:[0-9]+}', function ($request, $response, array $args) use ($router, $userPath) {
     $users = file_get_contents($userPath);

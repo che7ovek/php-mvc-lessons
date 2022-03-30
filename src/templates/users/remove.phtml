@@ -1,0 +1,5 @@
+<form action="/users/<?= $user['id'] ?>" method="post">
+    <input type="hidden" name="_METHOD" value="DELETE">
+    <div><?= $user['name'] ?></div>
+    <input type="submit" value="Remove">
+</form>
