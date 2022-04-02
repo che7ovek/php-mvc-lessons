@@ -54,11 +54,9 @@ $app->get('/users', function ($request, $response) use ($users) {
     return $this->get('renderer')->render($response, 'users/index.phtml', $params);
 })->setName('users');
 
-$app->get('/users/{id:[0-9]+}', function ($request, $response, array $args) use ($userPath) {
-    $users = file_get_contents($userPath);
-    if (!empty($users)) {
-        $users = json_decode($users, true);
-    } else {
+$app->get('/users/{id:[0-9]+}', function ($request, $response, array $args) {
+    $users = json_decode($request->getCookieParam('users', json_encode([])), true);
+    if (empty($users)) {
         return $response->withStatus(404);
     }
 
@@ -81,7 +79,7 @@ $app->get('/users/new', function ($request, $response) {
     return $this->get('renderer')->render($response, 'users/new.phtml', $params);
 })->setName('users-new');
 
-$app->post('/users', function ($request, $response) use ($router, $userPath) {
+$app->post('/users', function ($request, $response) use ($router) {
     $user = $request->getParsedBodyParam('user');
     $errors = [];
     if (empty($user['name'])) {
@@ -91,16 +89,14 @@ $app->post('/users', function ($request, $response) use ($router, $userPath) {
         $errors['nickname'] = 'Empty nickname';
     }
     if (count($errors) === 0) {
-        $users = file_get_contents($userPath);
-        if (!empty($users)) {
-            $users = json_decode($users, true);
-            $users[] = $user;
-        } else {
-            $users = [$user];
-        }
-        file_put_contents($userPath, json_encode($users));
+        $users = json_decode($request->getCookieParam('users', json_encode([])), true);
+        $users[] = $user;
+        $encodedUsers = json_encode($users);
+
         $this->get('flash')->addMessage('success', 'User added');
-        return $response->withRedirect($router->urlFor('users'), 302);
+        return $response
+            ->withHeader('Set-Cookie', "users={$encodedUsers}")
+            ->withRedirect($router->urlFor('users'), 302);
     }
     $params = [
         'user' => $user,
@@ -109,11 +105,9 @@ $app->post('/users', function ($request, $response) use ($router, $userPath) {
     return $this->get('renderer')->render($response, 'users/new.phtml', $params)->withStatus(422);
 })->setName('users');;
 
-$app->get('/users/{id:[0-9]+}/edit', function ($request, $response, array $args) use ($userPath) {
-    $users = file_get_contents($userPath);
-    if (!empty($users)) {
-        $users = json_decode($users, true);
-    } else {
+$app->get('/users/{id:[0-9]+}/edit', function ($request, $response, array $args) {
+    $users = json_decode($request->getCookieParam('users', json_encode([])), true);
+    if (empty($users)) {
         return $response->withStatus(404);
     }
 
@@ -129,11 +123,9 @@ $app->get('/users/{id:[0-9]+}/edit', function ($request, $response, array $args)
 })->setName('users-edit');
 
 // $app->put
-$app->patch('/users/{id:[0-9]+}', function ($request, $response, array $args) use ($router, $userPath) {
-    $users = file_get_contents($userPath);
-    if (!empty($users)) {
-        $users = json_decode($users, true);
-    } else {
+$app->patch('/users/{id:[0-9]+}', function ($request, $response, array $args) use ($router) {
+    $users = json_decode($request->getCookieParam('users', json_encode([])), true);
+    if (empty($users)) {
         return $response->withStatus(404);
     }
 
@@ -148,11 +140,14 @@ $app->patch('/users/{id:[0-9]+}', function ($request, $response, array $args) us
     if (empty($user['name'])) {
         $errors['name'] = 'Empty name';
     }
+
     if (count($errors) === 0) {
         $users[$userId]['name'] = $user['name'];
-        file_put_contents($userPath, json_encode($users));
+        $encodedUsers = json_encode($users);
         $this->get('flash')->addMessage('success', 'User updated');
-        return $response->withRedirect($router->urlFor('users', ['id' => $userId]), 302);
+        return $response
+            ->withHeader('Set-Cookie', "users={$encodedUsers}")
+            ->withRedirect($router->urlFor('users', ['id' => $userId]), 302);
     }
     $params = [
         'user' => $user,
@@ -161,11 +156,9 @@ $app->patch('/users/{id:[0-9]+}', function ($request, $response, array $args) us
     return $this->get('renderer')->render($response, 'users/edit.phtml', $params)->withStatus(422);
 })->setName('users');
 
-$app->get('/users/{id:[0-9]+}/delete', function ($request, $response, array $args) use ($router, $userPath) {
-    $users = file_get_contents($userPath);
-    if (!empty($users)) {
-        $users = json_decode($users, true);
-    } else {
+$app->get('/users/{id:[0-9]+}/delete', function ($request, $response, array $args) use ($router) {
+    $users = json_decode($request->getCookieParam('users', json_encode([])), true);
+    if (empty($users)) {
         return $response->withStatus(404);
     }
 
@@ -182,11 +175,9 @@ $app->get('/users/{id:[0-9]+}/delete', function ($request, $response, array $arg
     return $this->get('renderer')->render($response, 'users/remove.phtml', $params);
 })->setName('users-delete');
 
-$app->delete('/users/{id:[0-9]+}', function ($request, $response, array $args) use ($router, $userPath) {
-    $users = file_get_contents($userPath);
-    if (!empty($users)) {
-        $users = json_decode($users, true);
-    } else {
+$app->delete('/users/{id:[0-9]+}', function ($request, $response, array $args) use ($router) {
+    $users = json_decode($request->getCookieParam('users', json_encode([])), true);
+    if (empty($users)) {
         return $response->withStatus(404);
     }
 
@@ -196,10 +187,38 @@ $app->delete('/users/{id:[0-9]+}', function ($request, $response, array $args) u
     }
 
     unset($users[$userId]);
-    file_put_contents($userPath, json_encode($users));
+    $encodedUsers = json_encode($users);
 
     $this->get('flash')->addMessage('success', 'User deleted');
-    return $response->withRedirect($router->urlFor('users'), 302);
+    return $response
+        ->withHeader('Set-Cookie', "users={$encodedUsers}")
+        ->withRedirect($router->urlFor('users'), 302);
 })->setName('users');
+
+$app->get('/auth', function ($request, $response) {
+    $isAuth = array_key_exists('IS_AUTH', $_SESSION);
+    if (!$isAuth) {
+        return $this->get('renderer')->render($response, 'auth/index.phtml');
+    } else {
+        return $this->get('renderer')->render($response, 'auth/logout.phtml');
+    }
+})->setName('auth');
+
+$app->post('/auth', function ($request, $response) use ($router) {
+    $user = $request->getParsedBodyParam('user');
+    if (isset($user['email'])) {
+        $_SESSION['IS_AUTH'] = true;
+        return $response
+            ->withRedirect($router->urlFor('auth'), 302);
+    }
+    return $this->get('renderer')->render($response, 'auth/index.phtml')->withStatus(422);
+})->setName('auth');
+
+$app->delete('/auth', function ($request, $response) use ($router) {
+    $_SESSION = [];
+    session_destroy();
+    return $response
+        ->withRedirect($router->urlFor('auth'), 302);
+});
 
 $app->run();
